@@ -1,15 +1,64 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import AuthContext from '../contexts/AuthContext'
 import { Container, Text, Button, Drawer, Chart, UsersForm } from '../components'
 import { MenuIcon, LogoutIcon, UsersIcon } from '../assets/'
 import { colors, spacing } from '../styles/variables'
+import { graphicRequest } from '../config/axios'
 
 const HomePage: React.FC = (): JSX.Element => {
     const { user, handleLogout } = useContext(AuthContext)
 
     const [openDrawer, setOpenDrawer] = useState(false)
     const [usersForm, setUsersForm] = useState(false)
+    const [clusterStatus, setClusterStatus] = useState('white')
+    const [cpuStatus, setCpuStatus] = useState({
+        labels: [],
+        data: []
+    })
+    const [memoryStatus, setMemoryStatus] = useState({
+        labels: [],
+        data: []
+    })
+    const [graphicData, setGraphicData] = useState([{
+        CPU: 0,
+        Memory: 0,
+        label: ''
+    }])
 
+    useEffect(() => {
+        (async ()=>{
+            try {
+                const getClusterStatus = await graphicRequest.get('cab2791c-7c85-4461-b95c-86bc1a12dc72')
+                setClusterStatus(getClusterStatus.data.status)
+
+                const getCpuStatus= await graphicRequest.get('b1bc5162-7cf2-4599-b1f5-e3bd58fcf07f')
+                setCpuStatus(getCpuStatus.data)
+
+                const getMemoryStatus = await graphicRequest.get('d23c3262-967e-4567-b7f6-2fd263748811')
+                setMemoryStatus(getMemoryStatus.data)
+            } catch(err) {
+                console.log(err)
+            }
+        })()
+    }, [])
+
+    useEffect(() => {
+        const populateGraphicData: any = []
+        cpuStatus?.labels.forEach((item: any, index: number) => {
+            populateGraphicData.push({
+                CPU: cpuStatus.data[index],
+                Memory: memoryStatus.data[index],
+                label: item
+            })
+        })
+
+        setGraphicData(populateGraphicData)
+        
+    }, [cpuStatus, memoryStatus])
+
+    useEffect(() => {
+        console.log(graphicData)
+    }, [graphicData])
 
     return (
         <React.Fragment>
@@ -106,18 +155,7 @@ const HomePage: React.FC = (): JSX.Element => {
                                 }
                             ]}
                             brushOptions={{}}
-                            data={[
-                                {
-                                    CPU: 62,
-                                    Memory: 118,
-                                    label: '8/4'
-                                },
-                                {
-                                    CPU: 67,
-                                    Memory: 36,
-                                    label: '9/4'
-                                },
-                            ]}
+                            data={graphicData}
                             responsiveHeight='90%'
                             legendOptions={{}}
                             type="bar"
@@ -129,7 +167,7 @@ const HomePage: React.FC = (): JSX.Element => {
                             customStyles='height: 10%;'
                             >
                                 <Text textAlign='center'>Status Cluster:</Text>
-                                <div style={{ border: '1px solid', borderRadius: '100%', width: '30px', height: '30px', background: 'lightgreen'}}></div>
+                                <div style={{ border: '1px solid', borderRadius: '100%', width: '30px', height: '30px', background: `light${clusterStatus}`}}></div>
                             </Container>
                         
                         </Container>)
